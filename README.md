@@ -24,7 +24,13 @@ Early operator tooling. Read-only by design.
 
 ## Install
 
-Clone the repo, then from the repository root:
+From PowerShell Gallery:
+
+```powershell
+Install-Module SecretManagement.KeeperPowerCommander -Scope CurrentUser
+```
+
+From a local clone:
 
 ```powershell
 .\scripts\Install-ModuleLocal.ps1
@@ -40,10 +46,8 @@ notepad $env:USERPROFILE\.keeper-secret-map.json
 Register a vault:
 
 ```powershell
-Register-SecretVault `
-  -Name KeeperPowerCommander `
-  -ModuleName SecretManagement.KeeperPowerCommander `
-  -VaultParameters @{ MapPath = "$env:USERPROFILE\.keeper-secret-map.json" }
+.\scripts\Register-KeeperPowerCommanderVault.ps1 `
+  -MapPath "$env:USERPROFILE\.keeper-secret-map.json"
 ```
 
 ## Map File
@@ -89,6 +93,16 @@ Use the launcher to fetch a secret into an environment variable for a child proc
 
 ## License
 
-AGPL-3.0. See `LICENSE`.
+AGPL-3.0-or-later. See `LICENSE`.
 
 Keeper PowerCommander is a runtime dependency under Keeper's license. See `THIRD_PARTY_NOTICES.md`.
+
+## Publish
+
+Publish new versions from a clean checkout after bumping `ModuleVersion`:
+
+```powershell
+$apiKey = Get-Secret -Vault LocalStore -Name 'powershell-gallery/mtg-thomas-publish-to-gallery-api-secret' -AsPlainText
+.\scripts\Publish-GalleryRelease.ps1 -NuGetApiKey $apiKey -WhatIf
+.\scripts\Publish-GalleryRelease.ps1 -NuGetApiKey $apiKey
+```
