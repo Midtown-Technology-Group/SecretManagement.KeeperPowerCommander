@@ -3,6 +3,9 @@ param(
     [string] $RepositoryPath = (Split-Path -Parent $PSScriptRoot),
 
     [Parameter()]
+    [string] $EnterpriseDomain = "midtowntg.com",
+
+    [Parameter()]
     [string[]] $Name = @("*"),
 
     [Parameter()]
@@ -28,7 +31,13 @@ if (Get-SecretVault -Name KeeperPowerCommander -ErrorAction SilentlyContinue) {
 }
 Register-SecretVault -Name KeeperPowerCommander -ModuleName SecretManagement.KeeperPowerCommander -VaultParameters @{ MapPath = 'C:\Users\ThomasBray\.codex\keeper-secret-map.json' }
 Write-Host "Connecting to Keeper. Complete SSO if prompted..." -ForegroundColor Cyan
-Connect-Keeper | Out-Null
+if ('$($EnterpriseDomain -replace "'", "''")') {
+    Write-Host "Using Keeper enterprise domain: $($EnterpriseDomain -replace "'", "''")" -ForegroundColor Cyan
+    Connect-Keeper -NewLogin -SsoProvider -Username '$($EnterpriseDomain -replace "'", "''")'
+}
+else {
+    Connect-Keeper
+}
 & '$($verifyScript -replace "'", "''")' -Name $nameLiteral -ReportPath '$($ReportPath -replace "'", "''")' -Verbose
 Write-Host ""
 Write-Host "Report written to $($ReportPath -replace "'", "''")" -ForegroundColor Green
