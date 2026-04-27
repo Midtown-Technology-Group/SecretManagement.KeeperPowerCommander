@@ -16,6 +16,7 @@ jobs:
         shell: pwsh
         run: |
           Install-Module Microsoft.PowerShell.SecretManagement -Scope CurrentUser -Force
+          Install-Module PowerCommander -Scope CurrentUser -Force
 
       - name: Validate module manifests
         shell: pwsh
