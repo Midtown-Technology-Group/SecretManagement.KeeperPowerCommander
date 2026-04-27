@@ -24,7 +24,6 @@ $launcher = @"
 `$ErrorActionPreference = "Stop"
 Set-Location '$($RepositoryPath -replace "'", "''")'
 Import-Module PowerCommander -ErrorAction Stop
-Import-Module Microsoft.PowerShell.Security -ErrorAction Stop
 Import-Module Microsoft.PowerShell.SecretManagement -ErrorAction Stop
 Import-Module SecretManagement.KeeperPowerCommander -Force -ErrorAction Stop
 if (Get-SecretVault -Name KeeperPowerCommander -ErrorAction SilentlyContinue) {
@@ -47,7 +46,12 @@ Read-Host "Press Enter to close"
 
 $launcherPath = Join-Path $env:TEMP "keeper-localstore-import-verifier-launch.ps1"
 Set-Content -LiteralPath $launcherPath -Value $launcher -Encoding UTF8
-Start-Process powershell.exe -ArgumentList @("-NoExit", "-ExecutionPolicy", "Bypass", "-File", $launcherPath)
+$shell = (Get-Command pwsh.exe -ErrorAction SilentlyContinue).Source
+if (-not $shell) {
+    $shell = (Get-Command powershell.exe -ErrorAction Stop).Source
+}
+
+Start-Process $shell -ArgumentList @("-NoExit", "-ExecutionPolicy", "Bypass", "-File", $launcherPath)
 
 [pscustomobject]@{
     Started = $true
