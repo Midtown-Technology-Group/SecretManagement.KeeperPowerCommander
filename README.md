@@ -1,6 +1,6 @@
 # SecretManagement.KeeperPowerCommander
 
-Read-only PowerShell SecretManagement extension vault backed by Keeper PowerCommander.
+PowerShell SecretManagement extension vault backed by Keeper PowerCommander.
 
 This module lets operator scripts use the standard SecretManagement interface:
 
@@ -13,7 +13,7 @@ The extension uses Keeper PowerCommander to reach the Keeper Vault. It does not 
 
 ## Status
 
-Early operator tooling. Read-only by design.
+Early operator tooling. Reads and writes Keeper records through PowerCommander. Destructive operations remain intentionally conservative.
 
 ## Requirements
 
@@ -77,6 +77,31 @@ $secret = Get-Secret -Vault KeeperPowerCommander -Name pax8-mcp
 ```
 
 Use `-AsPlainText` only at the boundary where a downstream tool requires plaintext.
+
+## Write Secrets
+
+`Set-Secret` creates or updates a Keeper record, then updates the local map file with the Keeper record UID.
+
+```powershell
+Set-Secret `
+  -Vault KeeperPowerCommander `
+  -Name "example/api-token" `
+  -Secret (Read-Host -AsSecureString "Secret") `
+  -Metadata @{
+    Folder = "Codex/LocalStore Migration"
+    Description = "Example API token"
+    Field = "Password"
+  }
+```
+
+To copy LocalStore entries into Keeper without deleting the source entries:
+
+```powershell
+.\scripts\Copy-LocalStoreSecretsToKeeper.ps1 `
+  -Name "powershell-gallery/*" `
+  -Folder "Codex/LocalStore Migration" `
+  -WhatIf
+```
 
 ## MCP / Environment Injection
 
