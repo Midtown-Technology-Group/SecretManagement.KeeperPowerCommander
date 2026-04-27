@@ -1,0 +1,12 @@
+*.user
+*.swp
+.DS_Store
+.vscode/
+.vs/
+bin/
+obj/
+*.nupkg
+*.snupkg
+TestResults/
+coverage/
+keeper-secret-map.json

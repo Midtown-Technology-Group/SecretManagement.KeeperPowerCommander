@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SecretManagement
+        shell: pwsh
+        run: |
+          Install-Module Microsoft.PowerShell.SecretManagement -Scope CurrentUser -Force
+
+      - name: Validate module manifests
+        shell: pwsh
+        run: |
+          Test-ModuleManifest .\SecretManagement.KeeperPowerCommander\SecretManagement.KeeperPowerCommander.psd1
+          Test-ModuleManifest .\SecretManagement.KeeperPowerCommander\SecretManagement.KeeperPowerCommander.Extension\SecretManagement.KeeperPowerCommander.Extension.psd1
+
+      - name: Register test vault and list mapped metadata
+        shell: pwsh
+        run: |
+          $map = Join-Path $env:TEMP 'keeper-secret-map-test.json'
+          Copy-Item .\examples\keeper-secret-map.example.json $map -Force
+          Register-SecretVault -Name KeeperPowerCommanderTest `
+            -ModuleName .\SecretManagement.KeeperPowerCommander\SecretManagement.KeeperPowerCommander.psd1 `
+            -VaultParameters @{ MapPath = $map } `
+            -AllowClobber
+          Get-SecretInfo -Vault KeeperPowerCommanderTest
+          Test-SecretVault -Name KeeperPowerCommanderTest
