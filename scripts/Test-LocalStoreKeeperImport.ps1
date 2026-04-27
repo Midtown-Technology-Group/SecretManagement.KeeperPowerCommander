@@ -31,6 +31,7 @@ function Get-SecretLength {
     return ([string] $Value).Length
 }
 
+Import-Module Microsoft.PowerShell.Security -ErrorAction Stop
 Import-Module Microsoft.PowerShell.SecretManagement -ErrorAction Stop
 
 $selected = foreach ($pattern in $Name) {

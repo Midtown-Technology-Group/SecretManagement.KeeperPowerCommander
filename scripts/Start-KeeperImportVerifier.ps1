@@ -24,6 +24,7 @@ $launcher = @"
 `$ErrorActionPreference = "Stop"
 Set-Location '$($RepositoryPath -replace "'", "''")'
 Import-Module PowerCommander -ErrorAction Stop
+Import-Module Microsoft.PowerShell.Security -ErrorAction Stop
 Import-Module Microsoft.PowerShell.SecretManagement -ErrorAction Stop
 Import-Module SecretManagement.KeeperPowerCommander -Force -ErrorAction Stop
 if (Get-SecretVault -Name KeeperPowerCommander -ErrorAction SilentlyContinue) {
