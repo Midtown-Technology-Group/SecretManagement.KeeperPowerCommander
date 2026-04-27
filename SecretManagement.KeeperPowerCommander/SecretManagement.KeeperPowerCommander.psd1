@@ -6,7 +6,7 @@
             ModuleVersion = '1.1.2'
         }
     )
-    ModuleVersion = '0.1.1'
+    ModuleVersion = '0.1.2'
     GUID = 'f7acb793-1f9b-4dd3-a512-4bb263735982'
     Author = 'Midtown Technology Group'
     CompanyName = 'Midtown Technology Group'
@@ -20,9 +20,10 @@
     PrivateData = @{
         PSData = @{
             Tags = @('SecretManagement', 'Keeper', 'PowerCommander', 'Vault')
+            LicenseUri = 'https://www.gnu.org/licenses/agpl-3.0.txt'
             LicenseExpression = 'AGPL-3.0-or-later'
             ProjectUri = 'https://github.com/Midtown-Technology-Group/SecretManagement.KeeperPowerCommander'
-            ReleaseNotes = 'Add clean PowerShell Gallery dependency/license metadata and operator bootstrap/publish helpers.'
+            ReleaseNotes = 'Restore PowerShell Gallery LicenseUri metadata while keeping AGPL expression and bootstrap/publish helpers.'
         }
     }
 }

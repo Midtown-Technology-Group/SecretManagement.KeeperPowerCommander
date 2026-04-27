@@ -27,9 +27,9 @@ $apiKey = Get-Secret -Vault LocalStore -Name 'powershell-gallery/mtg-thomas-publ
 After Gallery publish succeeds:
 
 ```powershell
-git tag v0.1.1
+git tag v0.1.2
 git push origin main --tags
-gh release create v0.1.1 --title "v0.1.1" --notes "Clean package metadata and add bootstrap/publishing helpers."
+gh release create v0.1.2 --title "v0.1.2" --notes "Clean package metadata and add bootstrap/publishing helpers."
 ```
 
 Always increment `ModuleVersion` before publishing another Gallery version.
