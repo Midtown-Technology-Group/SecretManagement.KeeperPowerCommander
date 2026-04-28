@@ -36,14 +36,22 @@ From a local clone:
 .\scripts\Install-ModuleLocal.ps1
 ```
 
-Create a map file outside the repo, for example:
+Register a mapless vault that resolves SecretManagement names from Keeper record titles:
+
+```powershell
+.\scripts\Register-KeeperPowerCommanderVault.ps1 `
+  -LookupMode KeeperTitle `
+  -AllowClobber
+```
+
+Or create a map file outside the repo when you want local aliases, field overrides, or stable friendly names:
 
 ```powershell
 Copy-Item .\examples\keeper-secret-map.example.json $env:USERPROFILE\.keeper-secret-map.json
 notepad $env:USERPROFILE\.keeper-secret-map.json
 ```
 
-Register a vault:
+Register a mapped vault:
 
 ```powershell
 .\scripts\Register-KeeperPowerCommanderVault.ps1 `
@@ -52,7 +60,7 @@ Register a vault:
 
 ## Map File
 
-The map file stores friendly SecretManagement names and Keeper record references. It must not store secret values.
+The map file stores friendly SecretManagement names and Keeper record references. It must not store secret values. It is optional when the vault is registered with `LookupMode = "KeeperTitle"`.
 
 ```json
 {
@@ -68,6 +76,14 @@ The map file stores friendly SecretManagement names and Keeper record references
 ```
 
 Supported field names include `Password`, `Login`, `Url`, `Notes`, or a custom Keeper field label.
+
+## Lookup Modes
+
+- `Map` is the default. Secrets resolve only through the local map file.
+- `KeeperTitle` resolves `Get-Secret` and `Get-SecretInfo` directly from Keeper record titles. This is the lightest bootstrap path for a new workstation because there is no local map file to copy.
+- `Hybrid` checks the map first, then discovers additional Keeper records by title.
+
+Direct title lookup reads the `Password` field by default. Set `DefaultField` in `VaultParameters` when another Keeper field should be used for title-discovered records.
 
 ## Read Secrets
 

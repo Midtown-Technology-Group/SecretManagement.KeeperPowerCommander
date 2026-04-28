@@ -10,6 +10,25 @@ function Get-KeeperPowerCommanderMapPath {
     return $mapPath
 }
 
+function Get-KeeperPowerCommanderLookupMode {
+    param([hashtable] $VaultParameters)
+
+    if (-not $VaultParameters) { $VaultParameters = @{} }
+    $mode = $VaultParameters.LookupMode
+    if (-not $mode) {
+        if ($VaultParameters.MapPath) { return "Map" }
+        return "Map"
+    }
+
+    switch -Regex ([string] $mode) {
+        '^(map|mapped)$' { return "Map" }
+        '^(keepertitle|title|keeper)$' { return "KeeperTitle" }
+        '^(hybrid|auto)$' { return "Hybrid" }
+    }
+
+    throw "Unsupported KeeperPowerCommander LookupMode '$mode'. Use 'Map', 'KeeperTitle', or 'Hybrid'."
+}
+
 function Get-KeeperPowerCommanderMapDocument {
     param([hashtable] $VaultParameters)
 
@@ -70,6 +89,72 @@ function Find-KeeperPowerCommanderSecret {
         Select-Object -First 1
 }
 
+function ConvertTo-KeeperPowerCommanderSyntheticEntry {
+    param(
+        [object] $Record,
+        [string] $Field
+    )
+
+    $name = $Record.Name
+    if (-not $name) { $name = $Record.Title }
+    if (-not $name) { return $null }
+
+    $uid = $Record.Uid
+    if (-not $uid) { $uid = $Record.UID }
+    if (-not $uid) { $uid = $Record.RecordUid }
+    if (-not $uid) { return $null }
+
+    [pscustomobject]@{
+        name = [string] $name
+        uid = [string] $uid
+        field = if ($Field) { [string] $Field } else { "Password" }
+        source = "KeeperTitle"
+    }
+}
+
+function Get-KeeperPowerCommanderRecordsByTitle {
+    param([hashtable] $VaultParameters)
+
+    Connect-KeeperPowerCommander -VaultParameters $VaultParameters
+    @(Get-KeeperChildItem -ObjectType Record)
+}
+
+function Find-KeeperPowerCommanderSecretByTitle {
+    param(
+        [string] $Name,
+        [hashtable] $VaultParameters
+    )
+
+    $field = if ($VaultParameters -and $VaultParameters.DefaultField) { [string] $VaultParameters.DefaultField } else { "Password" }
+    Get-KeeperPowerCommanderRecordsByTitle -VaultParameters $VaultParameters |
+        Where-Object {
+            $_.Name -eq $Name -or
+            $_.Title -eq $Name
+        } |
+        ForEach-Object { ConvertTo-KeeperPowerCommanderSyntheticEntry -Record $_ -Field $field } |
+        Where-Object { $null -ne $_ } |
+        Select-Object -First 1
+}
+
+function Find-KeeperPowerCommanderSecretEntry {
+    param(
+        [string] $Name,
+        [hashtable] $VaultParameters
+    )
+
+    $mode = Get-KeeperPowerCommanderLookupMode -VaultParameters $VaultParameters
+    if ($mode -in @("Map", "Hybrid")) {
+        $entry = Find-KeeperPowerCommanderSecret -Name $Name -VaultParameters $VaultParameters
+        if ($entry) { return $entry }
+    }
+
+    if ($mode -in @("KeeperTitle", "Hybrid")) {
+        return Find-KeeperPowerCommanderSecretByTitle -Name $Name -VaultParameters $VaultParameters
+    }
+
+    return $null
+}
+
 function Get-KeeperPowerCommanderFieldValue {
     param(
         [object] $Record,
@@ -112,6 +197,7 @@ function Connect-KeeperPowerCommander {
     param([hashtable] $VaultParameters)
 
     if (-not $VaultParameters) { $VaultParameters = @{} }
+    if ($VaultParameters.SkipConnect) { return }
     Import-Module PowerCommander -ErrorAction Stop
 
     if ($VaultParameters.Config) {
@@ -233,7 +319,8 @@ function Set-Secret {
     if (-not $VaultParameters -and $AdditionalParameters) { $VaultParameters = $AdditionalParameters }
     if (-not $Metadata) { $Metadata = @{} }
 
-    $entry = Find-KeeperPowerCommanderSecret -Name $Name -VaultParameters $VaultParameters
+    $mode = Get-KeeperPowerCommanderLookupMode -VaultParameters $VaultParameters
+    $entry = Find-KeeperPowerCommanderSecretEntry -Name $Name -VaultParameters $VaultParameters
     $field = if ($Metadata.Field) { [string] $Metadata.Field } elseif ($entry -and $entry.field) { [string] $entry.field } else { "Password" }
     $uid = if ($Metadata.KeeperUid) { [string] $Metadata.KeeperUid } elseif ($Metadata.Uid) { [string] $Metadata.Uid } elseif ($entry) { [string] $entry.uid } else { $null }
     $recordType = if ($Metadata.RecordType) { [string] $Metadata.RecordType } else { "login" }
@@ -267,7 +354,9 @@ function Set-Secret {
         throw "Keeper record was created or updated, but the record UID could not be determined for '$Name'."
     }
 
-    Set-KeeperPowerCommanderMapEntry -Name $Name -Uid $uid -Field $field -Metadata $Metadata -VaultParameters $VaultParameters
+    if ($mode -ne "KeeperTitle") {
+        Set-KeeperPowerCommanderMapEntry -Name $Name -Uid $uid -Field $field -Metadata $Metadata -VaultParameters $VaultParameters
+    }
     return $true
 }
 
@@ -283,7 +372,7 @@ function Set-SecretInfo {
     if (-not $VaultParameters -and $AdditionalParameters) { $VaultParameters = $AdditionalParameters }
     if (-not $Metadata) { $Metadata = @{} }
 
-    $entry = Find-KeeperPowerCommanderSecret -Name $Name -VaultParameters $VaultParameters
+    $entry = Find-KeeperPowerCommanderSecretEntry -Name $Name -VaultParameters $VaultParameters
     if (-not $entry) {
         throw "Secret '$Name' is not mapped in KeeperPowerCommander."
     }
@@ -292,6 +381,11 @@ function Set-SecretInfo {
     $field = if ($Metadata.Field) { [string] $Metadata.Field } elseif ($entry.field) { [string] $entry.field } else { "Password" }
     if (-not $Metadata.Description -and $entry.description) {
         $Metadata.Description = $entry.description
+    }
+
+    $mode = Get-KeeperPowerCommanderLookupMode -VaultParameters $VaultParameters
+    if ($mode -eq "KeeperTitle") {
+        throw "Set-SecretInfo cannot update Keeper metadata in LookupMode 'KeeperTitle'. Use Set-Secret with metadata or register with LookupMode 'Map' or 'Hybrid'."
     }
 
     Set-KeeperPowerCommanderMapEntry -Name $Name -Uid $uid -Field $field -Metadata $Metadata -VaultParameters $VaultParameters
@@ -307,7 +401,7 @@ function Get-Secret {
     )
 
     if (-not $VaultParameters -and $AdditionalParameters) { $VaultParameters = $AdditionalParameters }
-    $entry = Find-KeeperPowerCommanderSecret -Name $Name -VaultParameters $VaultParameters
+    $entry = Find-KeeperPowerCommanderSecretEntry -Name $Name -VaultParameters $VaultParameters
     if (-not $entry) { return $null }
 
     Connect-KeeperPowerCommander -VaultParameters $VaultParameters
@@ -342,8 +436,27 @@ function Get-SecretInfo {
     if (-not $VaultParameters -and $AdditionalParameters) { $VaultParameters = $AdditionalParameters }
     if ([string]::IsNullOrEmpty($Filter)) { $Filter = "*" }
 
-    $entries = Get-KeeperPowerCommanderMap -VaultParameters $VaultParameters |
-        Where-Object { $_.name -like $Filter }
+    $mode = Get-KeeperPowerCommanderLookupMode -VaultParameters $VaultParameters
+    if ($mode -eq "KeeperTitle") {
+        $field = if ($VaultParameters.DefaultField) { [string] $VaultParameters.DefaultField } else { "Password" }
+        $entries = Get-KeeperPowerCommanderRecordsByTitle -VaultParameters $VaultParameters |
+            ForEach-Object { ConvertTo-KeeperPowerCommanderSyntheticEntry -Record $_ -Field $field } |
+            Where-Object { $null -ne $_ -and $_.name -like $Filter }
+    }
+    elseif ($mode -eq "Hybrid") {
+        $field = if ($VaultParameters.DefaultField) { [string] $VaultParameters.DefaultField } else { "Password" }
+        $mapped = @(Get-KeeperPowerCommanderMap -VaultParameters $VaultParameters)
+        $mappedNames = @($mapped | ForEach-Object { $_.name })
+        $discovered = Get-KeeperPowerCommanderRecordsByTitle -VaultParameters $VaultParameters |
+            ForEach-Object { ConvertTo-KeeperPowerCommanderSyntheticEntry -Record $_ -Field $field } |
+            Where-Object { $null -ne $_ -and $_.name -notin $mappedNames }
+        $entries = @($mapped) + @($discovered) |
+            Where-Object { $_.name -like $Filter }
+    }
+    else {
+        $entries = Get-KeeperPowerCommanderMap -VaultParameters $VaultParameters |
+            Where-Object { $_.name -like $Filter }
+    }
 
     foreach ($entry in $entries) {
         $metadata = @{
@@ -382,7 +495,10 @@ function Test-SecretVault {
 
     try {
         if (-not $VaultParameters -and $AdditionalParameters) { $VaultParameters = $AdditionalParameters }
-        $null = Get-KeeperPowerCommanderMap -VaultParameters $VaultParameters
+        $mode = Get-KeeperPowerCommanderLookupMode -VaultParameters $VaultParameters
+        if ($mode -in @("Map", "Hybrid")) {
+            $null = Get-KeeperPowerCommanderMap -VaultParameters $VaultParameters
+        }
         Import-Module PowerCommander -ErrorAction Stop
         return $true
     }

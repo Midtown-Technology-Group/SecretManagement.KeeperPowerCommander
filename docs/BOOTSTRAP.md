@@ -8,6 +8,28 @@ This is the local operator path for using the module with Keeper PowerCommander.
 Install-Module SecretManagement.KeeperPowerCommander -Scope CurrentUser
 ```
 
+## Register Without a Map File
+
+For a new workstation, use Keeper record titles directly as SecretManagement names:
+
+```powershell
+Register-KeeperPowerCommanderVault.ps1 `
+  -LookupMode KeeperTitle `
+  -AllowClobber
+```
+
+Or directly:
+
+```powershell
+Register-SecretVault `
+  -Name KeeperPowerCommander `
+  -ModuleName SecretManagement.KeeperPowerCommander `
+  -VaultParameters @{ LookupMode = "KeeperTitle" } `
+  -AllowClobber
+```
+
+This avoids copying a local map file. `Get-Secret -Name example-api-token` resolves the Keeper record whose title is `example-api-token`.
+
 ## Create a Map File
 
 Copy the example to a local, untracked path and replace the UID values:
@@ -17,12 +39,13 @@ Copy-Item .\examples\keeper-secret-map.example.json $env:USERPROFILE\.keeper-sec
 notepad $env:USERPROFILE\.keeper-secret-map.json
 ```
 
-The map stores friendly names and Keeper record references. It must not store secret values.
+The map stores friendly names and Keeper record references. It must not store secret values. Use it when you need local aliases, field overrides, or names that do not match Keeper record titles.
 
 ## Register the Vault
 
 ```powershell
 Register-KeeperPowerCommanderVault.ps1 `
+  -LookupMode Map `
   -MapPath "$env:USERPROFILE\.keeper-secret-map.json"
 ```
 

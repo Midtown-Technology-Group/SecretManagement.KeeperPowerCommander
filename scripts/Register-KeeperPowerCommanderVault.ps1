@@ -6,6 +6,10 @@ param(
     [string] $MapPath = (Join-Path $env:USERPROFILE ".keeper-secret-map.json"),
 
     [Parameter()]
+    [ValidateSet("Map", "KeeperTitle", "Hybrid")]
+    [string] $LookupMode = "Map",
+
+    [Parameter()]
     [switch] $AllowClobber
 )
 
@@ -13,14 +17,22 @@ $ErrorActionPreference = "Stop"
 
 Import-Module Microsoft.PowerShell.SecretManagement -ErrorAction Stop
 
-if (-not (Test-Path -LiteralPath $MapPath)) {
+if ($LookupMode -in @("Map", "Hybrid") -and -not (Test-Path -LiteralPath $MapPath)) {
     throw "Map file not found at '$MapPath'. Copy examples\keeper-secret-map.example.json and update it first."
+}
+
+$vaultParameters = @{
+    LookupMode = $LookupMode
+}
+
+if ($LookupMode -in @("Map", "Hybrid")) {
+    $vaultParameters.MapPath = $MapPath
 }
 
 $params = @{
     Name = $Name
     ModuleName = "SecretManagement.KeeperPowerCommander"
-    VaultParameters = @{ MapPath = $MapPath }
+    VaultParameters = $vaultParameters
 }
 
 if ($AllowClobber.IsPresent) {
