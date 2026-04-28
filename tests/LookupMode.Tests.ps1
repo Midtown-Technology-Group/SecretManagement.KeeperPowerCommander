@@ -119,4 +119,41 @@ Describe "KeeperPowerCommander lookup modes" {
 
         ($script:hostMessages -join "`n") | Should Match "https://keeper.test/sso"
     }
+
+    It "passes SSO provider and enterprise domain to Keeper" {
+        $script:connectParameters = $null
+
+        function global:Import-Module {
+            param(
+                [Parameter(Position = 0)]
+                [string] $Name
+            )
+
+            if ($Name -eq "PowerCommander") { return }
+            Microsoft.PowerShell.Core\Import-Module @PSBoundParameters
+        }
+
+        function global:Connect-Keeper {
+            param(
+                [string] $Username,
+                [switch] $NewLogin,
+                [switch] $SsoProvider
+            )
+
+            $script:connectParameters = @{
+                Username = $Username
+                NewLogin = $NewLogin.IsPresent
+                SsoProvider = $SsoProvider.IsPresent
+            }
+        }
+
+        Connect-KeeperPowerCommander -VaultParameters @{
+            SsoProvider = $true
+            EnterpriseDomain = "midtowntg.com"
+        }
+
+        $script:connectParameters.Username | Should Be "midtowntg.com"
+        $script:connectParameters.NewLogin | Should Be $true
+        $script:connectParameters.SsoProvider | Should Be $true
+    }
 }

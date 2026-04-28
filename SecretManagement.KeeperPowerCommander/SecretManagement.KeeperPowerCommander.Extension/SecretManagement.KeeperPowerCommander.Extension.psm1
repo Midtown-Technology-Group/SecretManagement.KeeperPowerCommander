@@ -200,15 +200,31 @@ function Connect-KeeperPowerCommander {
     if ($VaultParameters.SkipConnect) { return }
     Import-Module PowerCommander -ErrorAction Stop
 
+    $connectParams = @{}
     if ($VaultParameters.Config) {
-        Connect-Keeper -Config $VaultParameters.Config | ForEach-Object {
-            if ($_ -is [string]) { Write-Host $_ }
+        $connectParams.Config = [string] $VaultParameters.Config
+    }
+    if ($VaultParameters.Server) {
+        $connectParams.Server = [string] $VaultParameters.Server
+    }
+    if ($VaultParameters.SsoProvider) {
+        $connectParams.SsoProvider = $true
+        $connectParams.NewLogin = $true
+        $enterpriseDomain = $VaultParameters.EnterpriseDomain
+        if (-not $enterpriseDomain) { $enterpriseDomain = $VaultParameters.Username }
+        if ($enterpriseDomain) {
+            $connectParams.Username = [string] $enterpriseDomain
         }
     }
-    else {
-        Connect-Keeper | ForEach-Object {
-            if ($_ -is [string]) { Write-Host $_ }
-        }
+    elseif ($VaultParameters.NewLogin) {
+        $connectParams.NewLogin = $true
+    }
+    elseif ($VaultParameters.Username) {
+        $connectParams.Username = [string] $VaultParameters.Username
+    }
+
+    Connect-Keeper @connectParams | ForEach-Object {
+        if ($_ -is [string]) { Write-Host $_ }
     }
 }
 
