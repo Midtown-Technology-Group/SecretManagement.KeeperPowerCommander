@@ -88,4 +88,35 @@ Describe "KeeperPowerCommander lookup modes" {
 
         [System.Net.NetworkCredential]::new("", $secret).Password | Should Be "secret-for-uid-from-map"
     }
+
+    It "surfaces Keeper SSO URL output while connecting" {
+        $script:hostMessages = @()
+
+        function global:Write-Host {
+            param(
+                [Parameter(ValueFromRemainingArguments = $true)]
+                [object[]] $Object
+            )
+
+            $script:hostMessages += ($Object -join " ")
+        }
+
+        function global:Import-Module {
+            param(
+                [Parameter(Position = 0)]
+                [string] $Name
+            )
+
+            if ($Name -eq "PowerCommander") { return }
+            Microsoft.PowerShell.Core\Import-Module @PSBoundParameters
+        }
+
+        function global:Connect-Keeper {
+            "Open this URL to complete SSO: https://keeper.test/sso"
+        }
+
+        Connect-KeeperPowerCommander -VaultParameters @{}
+
+        ($script:hostMessages -join "`n") | Should Match "https://keeper.test/sso"
+    }
 }

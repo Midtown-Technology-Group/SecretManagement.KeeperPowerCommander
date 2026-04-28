@@ -201,10 +201,14 @@ function Connect-KeeperPowerCommander {
     Import-Module PowerCommander -ErrorAction Stop
 
     if ($VaultParameters.Config) {
-        Connect-Keeper -Config $VaultParameters.Config | Out-Null
+        Connect-Keeper -Config $VaultParameters.Config | ForEach-Object {
+            if ($_ -is [string]) { Write-Host $_ }
+        }
     }
     else {
-        Connect-Keeper | Out-Null
+        Connect-Keeper | ForEach-Object {
+            if ($_ -is [string]) { Write-Host $_ }
+        }
     }
 }
 
