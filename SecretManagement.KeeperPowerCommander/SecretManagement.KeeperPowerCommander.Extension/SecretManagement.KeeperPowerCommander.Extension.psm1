@@ -194,7 +194,10 @@ function Get-KeeperPowerCommanderFieldValue {
 }
 
 function Connect-KeeperPowerCommander {
-    param([hashtable] $VaultParameters)
+    param(
+        [hashtable] $VaultParameters,
+        [switch] $ForceLogin
+    )
 
     if (-not $VaultParameters) { $VaultParameters = @{} }
     if ($VaultParameters.SkipConnect) { return }
@@ -207,7 +210,13 @@ function Connect-KeeperPowerCommander {
     if ($VaultParameters.Server) {
         $connectParams.Server = [string] $VaultParameters.Server
     }
-    if ($VaultParameters.SsoProvider) {
+    $shouldStartLogin = $ForceLogin.IsPresent -or $VaultParameters.NewLogin
+    if ($VaultParameters.SsoProvider -and $shouldStartLogin) {
+        if (Test-KeeperPowerCommanderNonInteractiveSession) {
+            $command = New-KeeperPowerCommanderSsoCommand -VaultParameters $VaultParameters
+            throw "Keeper SSO refresh requires an interactive PowerShell session. Run this in a visible PowerShell window, then retry the secret read: $command"
+        }
+
         $connectParams.SsoProvider = $true
         $connectParams.NewLogin = $true
         $enterpriseDomain = $VaultParameters.EnterpriseDomain
@@ -216,16 +225,64 @@ function Connect-KeeperPowerCommander {
             $connectParams.Username = [string] $enterpriseDomain
         }
     }
-    elseif ($VaultParameters.NewLogin) {
+    elseif ($shouldStartLogin) {
+        if (Test-KeeperPowerCommanderNonInteractiveSession) {
+            throw "Keeper login refresh requires an interactive PowerShell session. Open a visible PowerShell window, run Connect-Keeper, then retry the secret read."
+        }
+
         $connectParams.NewLogin = $true
     }
     elseif ($VaultParameters.Username) {
         $connectParams.Username = [string] $VaultParameters.Username
     }
 
-    Connect-Keeper @connectParams | ForEach-Object {
-        if ($_ -is [string]) { Write-Host $_ }
+    try {
+        Connect-Keeper @connectParams | ForEach-Object {
+            if ($_ -is [string]) { Write-Host $_ }
+        }
     }
+    catch {
+        if ((Test-KeeperPowerCommanderNonInteractiveSession) -and ($_.Exception.Message -match 'Non-interactive session detected')) {
+            $command = New-KeeperPowerCommanderSsoCommand -VaultParameters $VaultParameters
+            throw "Keeper auth is not available in this non-interactive session. Run this in a visible PowerShell window, then retry the secret read: $command"
+        }
+
+        throw
+    }
+}
+
+function Test-KeeperPowerCommanderNonInteractiveSession {
+    if ($env:KEEPER_POWERCOMMANDER_ASSUME_INTERACTIVE -eq "1") { return $false }
+
+    $args = [System.Environment]::GetCommandLineArgs()
+    if ($args -contains "-NonInteractive") { return $true }
+
+    try {
+        if ([Console]::IsInputRedirected -and [Console]::IsOutputRedirected) { return $true }
+    }
+    catch {
+        return $true
+    }
+
+    return $false
+}
+
+function New-KeeperPowerCommanderSsoCommand {
+    param([hashtable] $VaultParameters)
+
+    if (-not $VaultParameters) { $VaultParameters = @{} }
+    $enterpriseDomain = $VaultParameters.EnterpriseDomain
+    if (-not $enterpriseDomain) { $enterpriseDomain = $VaultParameters.Username }
+
+    if ($VaultParameters.SsoProvider -and $enterpriseDomain) {
+        return "Connect-Keeper -NewLogin -SsoProvider -Username '$enterpriseDomain'"
+    }
+
+    if ($VaultParameters.SsoProvider) {
+        return "Connect-Keeper -NewLogin -SsoProvider"
+    }
+
+    return "Connect-Keeper -NewLogin"
 }
 
 function ConvertTo-KeeperPowerCommanderPlainText {
@@ -502,7 +559,7 @@ function Unlock-SecretVault {
     )
 
     if (-not $VaultParameters -and $AdditionalParameters) { $VaultParameters = $AdditionalParameters }
-    Connect-KeeperPowerCommander -VaultParameters $VaultParameters
+    Connect-KeeperPowerCommander -VaultParameters $VaultParameters -ForceLogin
     return $true
 }
 

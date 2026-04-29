@@ -120,7 +120,7 @@ Describe "KeeperPowerCommander lookup modes" {
         ($script:hostMessages -join "`n") | Should Match "https://keeper.test/sso"
     }
 
-    It "passes SSO provider and enterprise domain to Keeper" {
+    It "does not start a new SSO login during normal connects" {
         $script:connectParameters = $null
 
         function global:Import-Module {
@@ -152,8 +152,78 @@ Describe "KeeperPowerCommander lookup modes" {
             EnterpriseDomain = "midtowntg.com"
         }
 
+        [string]::IsNullOrEmpty($script:connectParameters.Username) | Should Be $true
+        $script:connectParameters.NewLogin | Should Be $false
+        $script:connectParameters.SsoProvider | Should Be $false
+    }
+
+    It "passes SSO provider and enterprise domain to Keeper when login is forced" {
+        $script:connectParameters = $null
+
+        function global:Import-Module {
+            param(
+                [Parameter(Position = 0)]
+                [string] $Name
+            )
+
+            if ($Name -eq "PowerCommander") { return }
+            Microsoft.PowerShell.Core\Import-Module @PSBoundParameters
+        }
+
+        function global:Connect-Keeper {
+            param(
+                [string] $Username,
+                [switch] $NewLogin,
+                [switch] $SsoProvider
+            )
+
+            $script:connectParameters = @{
+                Username = $Username
+                NewLogin = $NewLogin.IsPresent
+                SsoProvider = $SsoProvider.IsPresent
+            }
+        }
+
+        try {
+            $env:KEEPER_POWERCOMMANDER_ASSUME_INTERACTIVE = "1"
+            Connect-KeeperPowerCommander -VaultParameters @{
+                SsoProvider = $true
+                EnterpriseDomain = "midtowntg.com"
+            } -ForceLogin
+        }
+        finally {
+            Remove-Item Env:\KEEPER_POWERCOMMANDER_ASSUME_INTERACTIVE -ErrorAction SilentlyContinue
+        }
+
         $script:connectParameters.Username | Should Be "midtowntg.com"
         $script:connectParameters.NewLogin | Should Be $true
         $script:connectParameters.SsoProvider | Should Be $true
+    }
+
+    It "turns noninteractive Keeper auth failures into a useful operator command" {
+        function global:Import-Module {
+            param(
+                [Parameter(Position = 0)]
+                [string] $Name
+            )
+
+            if ($Name -eq "PowerCommander") { return }
+            Microsoft.PowerShell.Core\Import-Module @PSBoundParameters
+        }
+
+        function global:Test-KeeperPowerCommanderNonInteractiveSession {
+            return $true
+        }
+
+        function global:Connect-Keeper {
+            throw "Non-interactive session detected"
+        }
+
+        {
+            Connect-KeeperPowerCommander -VaultParameters @{
+                SsoProvider = $true
+                EnterpriseDomain = "midtowntg.com"
+            }
+        } | Should Throw "Connect-Keeper -NewLogin -SsoProvider -Username 'midtowntg.com'"
     }
 }
