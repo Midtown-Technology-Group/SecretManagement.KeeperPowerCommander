@@ -13,13 +13,13 @@ Run the dry run:
 
 ```powershell
 $apiKey = Get-Secret -Vault LocalStore -Name 'powershell-gallery/mtg-thomas-publish-to-gallery-api-secret' -AsPlainText
-.\scripts\Publish-GalleryRelease.ps1 -NuGetApiKey $apiKey -WhatIf
+.\scripts\Publish-GalleryRelease.ps1 -NuGetApiKey $apiKey -WhatIf -Force
 ```
 
 ## Publish
 
 ```powershell
-.\scripts\Publish-GalleryRelease.ps1 -NuGetApiKey $apiKey
+.\scripts\Publish-GalleryRelease.ps1 -NuGetApiKey $apiKey -Force
 ```
 
 ## GitHub Release
@@ -27,9 +27,9 @@ $apiKey = Get-Secret -Vault LocalStore -Name 'powershell-gallery/mtg-thomas-publ
 After Gallery publish succeeds:
 
 ```powershell
-git tag v0.1.2
+git tag v<version>
 git push origin main --tags
-gh release create v0.1.2 --title "v0.1.2" --notes "Clean package metadata and add bootstrap/publishing helpers."
+gh release create v<version> --title "v<version>" --notes "<release notes>"
 ```
 
 Always increment `ModuleVersion` before publishing another Gallery version.

@@ -94,6 +94,22 @@ $secret = Get-Secret -Vault KeeperPowerCommander -Name pax8-mcp
 
 Use `-AsPlainText` only at the boundary where a downstream tool requires plaintext.
 
+## Keeper SSO Notes
+
+For agent-started operator shells that must complete Keeper SSO, set the explicit
+interactive override before running `Connect-Keeper`:
+
+```powershell
+$env:KEEPER_POWERCOMMANDER_ASSUME_INTERACTIVE = "1"
+Connect-Keeper -NewLogin -SsoProvider -Username "midtowntg.com"
+```
+
+The extension honors this override. Keeper's published `PowerCommander` 1.1.0
+and 1.1.1 still have an internal interactive-session check in
+`AuthCommands.ps1`; if SSO still fails with `Non-interactive session detected`,
+patch or update that Keeper module so its `Test-InteractiveSession` helper also
+honors the override.
+
 ## Write Secrets
 
 `Set-Secret` creates or updates a Keeper record, then updates the local map file with the Keeper record UID.

@@ -3,7 +3,10 @@ param(
     [string] $NuGetApiKey,
 
     [Parameter()]
-    [switch] $WhatIf
+    [switch] $WhatIf,
+
+    [Parameter()]
+    [switch] $Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,6 +25,10 @@ $publishParams = @{
 
 if ($WhatIf.IsPresent) {
     $publishParams.WhatIf = $true
+}
+
+if ($Force.IsPresent) {
+    $publishParams.Force = $true
 }
 
 Publish-Module @publishParams

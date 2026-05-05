@@ -74,3 +74,20 @@ Get-Secret -Vault KeeperPowerCommander -Name example-api-token
 ```
 
 Use `-AsPlainText` only when passing the value to a downstream process.
+
+## SSO From Agent-Started Shells
+
+When an operator intentionally starts Keeper SSO from an agent-controlled shell,
+set the explicit interactive override first:
+
+```powershell
+$env:KEEPER_POWERCOMMANDER_ASSUME_INTERACTIVE = "1"
+Connect-Keeper -NewLogin -SsoProvider -Username "midtowntg.com"
+```
+
+Keeper's published `PowerCommander` 1.1.0 and 1.1.1 still perform their own
+interactive-session check before reading the SSO token. If `Connect-Keeper`
+throws `Non-interactive session detected` even with the env var set, inspect the
+installed `PowerCommander\AuthCommands.ps1` `Test-InteractiveSession` helper.
+The SecretManagement extension honors the override, but older Keeper
+PowerCommander builds may need the same override in that helper.

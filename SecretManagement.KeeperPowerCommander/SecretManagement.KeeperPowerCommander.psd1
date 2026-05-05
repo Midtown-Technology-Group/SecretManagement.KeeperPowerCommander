@@ -6,7 +6,7 @@
             ModuleVersion = '1.1.2'
         }
     )
-    ModuleVersion = '0.3.3'
+    ModuleVersion = '0.3.4'
     GUID = 'f7acb793-1f9b-4dd3-a512-4bb263735982'
     Author = 'Midtown Technology Group'
     CompanyName = 'Midtown Technology Group'
@@ -23,7 +23,7 @@
             LicenseUri = 'https://www.gnu.org/licenses/agpl-3.0.txt'
             LicenseExpression = 'AGPL-3.0-or-later'
             ProjectUri = 'https://github.com/Midtown-Technology-Group/SecretManagement.KeeperPowerCommander'
-            ReleaseNotes = 'Avoid forced SSO refresh during normal secret reads and surface a clear visible-shell command when Keeper auth is required from noninteractive sessions.'
+            ReleaseNotes = 'Document Keeper PowerCommander SSO bootstrap from agent-started shells and the KEEPER_POWERCOMMANDER_ASSUME_INTERACTIVE workaround needed when Keeper PowerCommander rejects an intentional operator prompt as noninteractive.'
         }
     }
 }
