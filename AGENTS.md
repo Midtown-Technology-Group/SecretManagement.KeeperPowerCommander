@@ -6,7 +6,7 @@ This PowerShell extension implements the standard SecretManagement vault interfa
 
 `SecretManagement.KeeperPowerCommander/` contains the module manifest and nested extension. `scripts/` contains local installation, vault registration, import verification, child-process injection, and Gallery publishing. `tests/` covers manifests and lookup modes. Preserve `Map`, `KeeperTitle`, and map-first `Hybrid` behavior, UID/field overrides, and the documented default Password field.
 
-Map files store record references and metadata only, never secret values, and belong outside the repo. Plaintext is allowed only at the downstream boundary that requires it; never emit it to logs, transcripts, exceptions, or artifacts. Use the injection launcher rather than copying a secret into a command string. SSO may require an operator; do not treat an interactive override as completed authentication or weaken authentication to avoid a prompt.
+Live operator map files store record references and metadata only, never secret values, and belong outside the repo. Keep `examples/keeper-secret-map.example.json` as a checked-in non-secret template; copy it before adding local aliases or field overrides. Plaintext is allowed only at the downstream boundary that requires it; never emit it to logs, transcripts, exceptions, or artifacts. Use the injection launcher rather than copying a secret into a command string. SSO may require an operator; do not treat an interactive override as completed authentication or weaken authentication to avoid a prompt.
 
 ## Checks and operator boundaries
 
